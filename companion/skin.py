@@ -6,6 +6,8 @@ A skin is a folder in `skins/<name>/` containing images, plus an optional
     {
       "faces": "right",              // which way the art faces: "right" or "left"
       "fps": 8,                      // animation speed
+      "mirror": ["walk"],            // animations flipped when he turns around
+                                     // (default: all; leave out front-facing art)
       "animations": {                // any animation left out falls back to "idle"
         "idle":  ["idle1.png", "idle2.png"],
         "walk":  "walk.gif",         // a GIF works too
@@ -18,9 +20,10 @@ A skin is a folder in `skins/<name>/` containing images, plus an optional
       }
     }
 
-With no skin.json, the first image in the folder is used and animated
-procedurally (bobbing, walking tilt, talking bounce, ...). Use transparent
-PNGs; `scripts/make_skin.py` can help.
+An animation given as one still image is animated procedurally (bobbing,
+walking tilt, talking bounce, ...). Missing animations are made from idle.
+With no skin.json, the first image in the folder is used for everything.
+Use transparent PNGs; `scripts/make_skin.py` can help.
 
 Skin "default" is an original character drawn in code.
 """
@@ -43,8 +46,11 @@ IMAGE_EXTS = {".png", ".gif", ".webp"}
 class Skin:
     """Frames per animation, all on one canvas size, facing right."""
 
-    def __init__(self, frames: dict[str, list[Image.Image]], fps: float) -> None:
+    def __init__(
+        self, frames: dict[str, list[Image.Image]], fps: float, mirror: list[str] | None = None
+    ) -> None:
         self.fps = fps
+        self.mirror = set(ANIMATIONS if mirror is None else mirror)
         w = max(f.width for fs in frames.values() for f in fs)
         h = max(f.height for fs in frames.values() for f in fs)
         self.size = (w, h)
@@ -237,28 +243,30 @@ def load_skin(name: str, height: int) -> Skin:
                 frames[anim] = [img for f in files for img in _load_images(folder / f)]
             if "idle" not in frames:
                 raise ValueError(f"{folder / 'skin.json'} needs an 'idle' animation")
-            procedural = False
         else:
             images = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
             if not images:
                 raise FileNotFoundError(f"No images in {folder}")
             frames = {"idle": _load_images(images[0])}
-            procedural = len(frames["idle"]) == 1
 
         if cfg.get("faces", "right") == "left":
             frames = {k: [f.transpose(Image.FLIP_LEFT_RIGHT) for f in v] for k, v in frames.items()}
 
-        # Scale everything by one factor so animations line up with each other.
-        cropped = {k: [_crop(f) for f in v] for k, v in frames.items()}
-        ref = max(f.height for f in cropped["idle"])
-        scale = height / ref
-        frames = {
-            k: [f.resize((max(1, round(f.width * scale)), max(1, round(f.height * scale))), Image.LANCZOS) for f in v]
-            for k, v in cropped.items()
-        }
-        if procedural:
-            frames = procedural_frames(frames["idle"][0])
-        return Skin(frames, fps)
+        # Each animation is scaled so the character is `height` tall in it
+        # (pictures for different poses often come at different sizes).
+        result: dict[str, list[Image.Image]] = {}
+        for anim, fs in frames.items():
+            fs = [_crop(f) for f in fs]
+            scale = height / max(f.height for f in fs)
+            fs = [f.resize((max(1, round(f.width * scale)), max(1, round(f.height * scale))), Image.LANCZOS) for f in fs]
+            # A single still picture gets procedural motion for its animation.
+            result[anim] = procedural_frames(fs[0])[anim] if len(fs) == 1 else fs
+        if len(frames["idle"]) == 1:
+            base = result["idle"][0]
+            generated = procedural_frames(base)
+            for anim in ANIMATIONS:
+                result.setdefault(anim, generated[anim])
+        return Skin(result, fps, cfg.get("mirror"))
 
     # Default art: scale to the requested height.
     scale = height / 180

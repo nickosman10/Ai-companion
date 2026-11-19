@@ -11,6 +11,8 @@ Options:
     --faces left       the art faces left (default: right)
     --remove-bg        cut out the background automatically (needs: pip install rembg)
     --fps 8            animation speed
+    --mirror walk      only these animations flip when he turns around (good when
+                       idle/talk pictures face the viewer: keeps armour on the right side)
 
 Then set "skin": "phainon" in settings.json and restart.
 """
@@ -65,6 +67,7 @@ def main() -> None:
     ap.add_argument("--faces", choices=["left", "right"], default="right")
     ap.add_argument("--remove-bg", action="store_true")
     ap.add_argument("--fps", type=float, default=8)
+    ap.add_argument("--mirror", nargs="+", choices=ANIMATIONS)
     args = ap.parse_args()
 
     anims = {a: list(getattr(args, a)) for a in ANIMATIONS}
@@ -89,7 +92,9 @@ def main() -> None:
         if names:
             config["animations"][anim] = names
 
-    if only_one_still:
+    if args.mirror:
+        config["mirror"] = args.mirror
+    if only_one_still and not args.mirror:
         # No animations listed: the app animates the single image itself.
         config.pop("animations")
     (folder / "skin.json").write_text(json.dumps(config, indent=2), encoding="utf-8")

@@ -217,3 +217,25 @@ def test_move_yourself_without_pet(ctx):
     assert "turned off" in run_tool(ctx, "move_yourself", {"action": "wave"})
     ctx.pet_command = lambda a: f"Doing: {a}"
     assert run_tool(ctx, "move_yourself", {"action": "wave"}) == "Doing: wave"
+
+
+def test_per_animation_stills_and_mirror(tmp_path, monkeypatch):
+    import json
+
+    from PIL import Image
+
+    from companion import skin as skin_mod
+
+    monkeypatch.setattr(skin_mod, "SKINS_DIR", tmp_path)
+    folder = tmp_path / "hero"
+    folder.mkdir()
+    Image.new("RGBA", (100, 300), (200, 50, 50, 255)).save(folder / "front.png")
+    Image.new("RGBA", (60, 600), (50, 50, 200, 255)).save(folder / "side.png")
+    (folder / "skin.json").write_text(json.dumps(
+        {"animations": {"idle": "front.png", "walk": "side.png"}, "mirror": ["walk"]}))
+    s = skin_mod.load_skin("hero", 150)
+    assert s.mirror == {"walk"}
+    assert len(s.frames["walk"]) == 4 and len(s.frames["talk"]) == 4
+    # Both pictures are scaled to the same character height despite different sizes.
+    walk_h = max(f.getchannel("A").getbbox()[3] - f.getchannel("A").getbbox()[1] for f in s.frames["walk"])
+    assert 145 <= walk_h <= 160

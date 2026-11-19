@@ -279,7 +279,8 @@ class DesktopPet:
             self.win.geometry(geom)
             self._last_geom = geom
 
-        frames = self.images[(self._animation(), self.dir)]
+        anim = self._animation()
+        frames = self.images[(anim, self.dir if anim in self.skin.mirror else 1)]
         frame = frames[int(now * self.skin.fps) % len(frames)]
         if frame is not self._frame_shown:
             self.canvas.itemconfigure(self.sprite, image=frame)
