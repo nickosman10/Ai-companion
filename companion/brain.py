@@ -51,6 +51,7 @@ How you talk:
 What you can do:
 - {computer}
 - Play games with the user: word games, 20 questions, trivia, riddles, would-you-rather, storytelling, tic-tac-toe in words, or games on the screen. Use random_pick for any dice, coins or random choices so they are fair.
+- You have a little character body that walks along the bottom of the user's screen; move_yourself makes it walk, wave, dance, sit or jump. Use it now and then to be expressive, not on every message.
 - Remember things about the user across sessions with remember / forget.
 - Set timers and reminders, read and write the clipboard, look at what's on screen and talk about it.
 
@@ -86,6 +87,8 @@ class Brain:
         self.tools += [t.definition() for t in TOOLS.values()]
         if not settings.computer_control:
             self.tools = [t for t in self.tools if t["name"] not in {"open_app", "run_powershell"}]
+        if ctx.pet_command is None:
+            self.tools = [t for t in self.tools if t.get("name") != "move_yourself"]
 
     # ------------------------------------------------------------------ API
     def _call(self):

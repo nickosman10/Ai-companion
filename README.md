@@ -17,6 +17,10 @@ Its brain is Claude (`claude-opus-5-5`). Everything else runs on your PC.
   coin games (with real randomness), or games on screen.
 - **Remember you.** It saves facts you share (your name, favourite games...)
   in `data/memory.json` and remembers them next time.
+- **Live on your screen.** A little character walks along your taskbar,
+  wanders, sits, follows your cursor, waves and dances. Drag him anywhere and
+  he falls back down. His replies pop up in a speech bubble. You can give him
+  any look you like (see "Your own character" below).
 - **Small helpers.** Timers and reminders, clipboard, focusing windows,
   PowerShell commands (it asks you first).
 
@@ -46,6 +50,13 @@ Its brain is Claude (`claude-opus-5-5`). Everything else runs on your PC.
 | "Stop" while it's working | It stops after the current action |
 | Slam the mouse into a screen corner | Emergency stop for mouse/keyboard control |
 | **Mute mic** button | It stops listening completely |
+| Click the character | Show or hide the chat window |
+| Right-click the character | Menu: Chat, Stop, Quit |
+| Drag the character | Pick him up and drop him |
+| "Buddy, come over here" / "do a dance" | He walks to your cursor / dances |
+
+Closing the chat window only hides it while the character is on. To quit,
+right-click the character and choose **Quit**.
 
 ## Settings
 
@@ -63,6 +74,48 @@ Edit `settings.json` (created by setup from `settings.example.json`):
 | `tts_voice_contains` | Pick a Windows voice, e.g. `"Zira"` or `"David"` |
 
 Other settings are in `companion/config.py`.
+
+## Your own character
+
+The built-in character is an original design. To make him look like someone
+else, for example a character you love from a game, give him your own images.
+The app can't include official game art, but you can use pictures you have
+for your own personal use.
+
+**Easiest: one picture.** Find or make a full-body picture of the character
+(a PNG with a transparent background works best), then in the project folder:
+
+```bat
+.venv\Scripts\activate
+python scripts\make_skin.py phainon C:\path\to\picture.png
+```
+
+If the picture has a background, add `--remove-bg` (first run
+`pip install rembg`). If the character faces left, add `--faces left`.
+Then set `"skin": "phainon"` in `settings.json` and restart. A single picture
+is animated automatically: he bobs while idle, tilts while walking, bounces
+while talking.
+
+**Better: a picture per animation.** Separate images or GIFs for each pose
+look more alive:
+
+```bat
+python scripts\make_skin.py phainon --idle idle.png --walk walk.gif ^
+    --talk talk1.png talk2.png --sit sit.png --wave wave.png --dance dance.gif
+```
+
+Animations are `idle`, `walk`, `talk`, `think`, `sit`, `drag` (being carried
+or falling), `wave` and `dance`. Any you leave out use `idle`. Skins live in
+`skins/<name>/`, and `skin.json` there controls the frames and speed (see
+`companion/skin.py`). Change the size with `pet_height` in `settings.json`.
+
+To match the personality too, set `name`, `wake_words` and `personality` in
+`settings.json`. Keep wake words to ordinary dictionary words: the offline
+speech model won't recognise unusual names, so "hey buddy" or "hey hero"
+works better than a fantasy name.
+
+The `skins/` folder is ignored by git, so your images aren't uploaded to
+GitHub.
 
 ## Privacy and safety
 
@@ -90,7 +143,9 @@ companion/
   desktop.py  mouse, keyboard and screenshots (Claude's computer toolset)
   tools.py    custom tools: apps, windows, PowerShell, memory, games, timers
   voice.py    wake word + speech recognition (Vosk) and text-to-speech
-  ui.py       the floating window
+  ui.py       the chat window
+  pet.py      the character walking around your screen
+  skin.py     loading character images and the built-in character
   memory.py   long-term memory file
 tests/        offline tests (python -m pytest tests)
 ```
@@ -110,5 +165,4 @@ def _jokes(ctx, inp):
 
 - A custom wake word model (openWakeWord) for any name you like
 - A nicer voice (cloud text-to-speech)
-- An animated character instead of the face
 - Spotify, calendar or smart-home integrations as tools

@@ -186,3 +186,34 @@ def test_stop_answers_pending_tools(ctx):
     assert "stopped" in b.respond("go").lower()
     last = b.messages[-1]["content"][0]
     assert last["tool_use_id"] == "a" and last["is_error"]
+
+
+# ---------------------------------------------------------------- skins
+def test_default_skin_has_all_animations():
+    from companion.skin import ANIMATIONS, load_skin
+
+    s = load_skin("default", 160)
+    assert s.size[1] == 160
+    for anim in ANIMATIONS:
+        assert s.frames[anim] and all(f.size == s.size for f in s.frames[anim])
+
+
+def test_single_image_skin_is_animated(tmp_path, monkeypatch):
+    from PIL import Image
+
+    from companion import skin as skin_mod
+
+    monkeypatch.setattr(skin_mod, "SKINS_DIR", tmp_path)
+    (tmp_path / "hero").mkdir()
+    img = Image.new("RGBA", (200, 400), (0, 0, 0, 0))
+    img.paste((200, 50, 50, 255), (50, 20, 150, 380))
+    img.save(tmp_path / "hero" / "hero.png")
+    s = skin_mod.load_skin("hero", 120)
+    assert len(s.frames["walk"]) == 4
+    assert all(f.size == s.size for fs in s.frames.values() for f in fs)
+
+
+def test_move_yourself_without_pet(ctx):
+    assert "turned off" in run_tool(ctx, "move_yourself", {"action": "wave"})
+    ctx.pet_command = lambda a: f"Doing: {a}"
+    assert run_tool(ctx, "move_yourself", {"action": "wave"}) == "Doing: wave"

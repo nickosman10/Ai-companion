@@ -119,6 +119,18 @@ class CompanionWindow:
         done.wait()
         return answer[0]
 
+    def toggle_visible(self) -> None:
+        if self.root.state() == "withdrawn":
+            self.root.deiconify()
+            self.root.lift()
+            self.entry.focus_set()
+        else:
+            self.root.withdraw()
+
+    def hide_on_close(self) -> None:
+        """Closing the window hides it; quit from the character's menu instead."""
+        self.root.protocol("WM_DELETE_WINDOW", self.root.withdraw)
+
     def run(self) -> None:
         self.root.mainloop()
 

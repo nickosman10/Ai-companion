@@ -42,6 +42,14 @@ class Settings:
     tts_rate: int = 185
     tts_voice_contains: str = ""  # e.g. "Zira" or "David" on Windows
 
+    # Desktop pet: the character that walks around your screen
+    pet_enabled: bool = True
+    # Folder name in skins/ ("default" = the built-in original character).
+    skin: str = "default"
+    pet_height: int = 160
+    # Show the chat window at startup (click the character to show/hide it).
+    start_with_chat_open: bool = True
+
     # Computer control
     computer_control: bool = True
     # Screenshots are downscaled so the long edge is at most this many pixels.

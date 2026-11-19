@@ -13,6 +13,7 @@ import threading
 
 from .brain import Brain
 from .config import Settings
+from .desktop import enable_dpi_awareness
 from .memory import Memory
 from .tools import ToolContext
 from .ui import CompanionWindow
@@ -25,6 +26,7 @@ def main() -> None:
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         print("Warning: ANTHROPIC_API_KEY is not set. See README.md, step 3.")
 
+    enable_dpi_awareness()
     settings = Settings.load()
     memory = Memory()
     speaker = Speaker(settings.tts_rate, settings.tts_voice_contains)
@@ -44,9 +46,60 @@ def main() -> None:
             (listener.muted.set if muted else listener.muted.clear)()
 
     window = CompanionWindow(settings.name, submit, stop, toggle_mute)
+    pet = None
+    if settings.pet_enabled:
+        try:
+            from .pet import DesktopPet
+            from .skin import load_skin
+
+            pet = DesktopPet(
+                window.root,
+                load_skin(settings.skin, settings.pet_height),
+                on_click=window.toggle_visible,
+                menu_items=[
+                    ("Chat", window.toggle_visible),
+                    ("Stop", stop),
+                    ("Quit", window.root.destroy),
+                ],
+            )
+            window.hide_on_close()
+            if not settings.start_with_chat_open:
+                window.root.withdraw()
+        except Exception as e:
+            pet = None
+            window.post("sys", f"Desktop character is off: {e}")
+
+    def on_pet(fn) -> None:
+        """Run something on the character from any thread."""
+        if pet is not None:
+            window.post("call", fn)
+
+    def set_status(status: str) -> None:
+        window.post("status", status)
+        on_pet(lambda: pet.set_status(status))
+
+    def pet_command(action: str) -> str:
+        done = threading.Event()
+        out: dict = {}
+
+        def run():
+            try:
+                out["result"] = pet.command(action)
+            except Exception as e:
+                out["error"] = e
+            finally:
+                done.set()
+
+        window.post("call", run)
+        if not done.wait(5):
+            return "The character didn't respond."
+        if "error" in out:
+            raise out["error"]
+        return out["result"]
 
     def speak_now(text: str) -> None:
         window.post("say", "bot", text)
+        on_pet(lambda: pet.say(text))
         speaker.say(text)
 
     ctx = ToolContext(
@@ -55,8 +108,9 @@ def main() -> None:
         notify=lambda t: window.post("sys", t),
         confirm=window.confirm,
         confirm_shell_commands=settings.confirm_shell_commands,
+        pet_command=pet_command if pet is not None else None,
     )
-    brain = Brain(settings, ctx, on_status=lambda s: window.post("status", s))
+    brain = Brain(settings, ctx, on_status=set_status)
 
     def worker() -> None:
         while True:
@@ -75,10 +129,11 @@ def main() -> None:
                     listener.busy.clear()
             if reply:
                 window.post("say", "bot", reply)
-                window.post("status", "speaking")
+                set_status("speaking")
+                on_pet(lambda r=reply: pet.say(r))
                 speaker.say(reply)
                 speaker.wait_until_done()
-            window.post("status", "idle")
+            set_status("idle")
             if listener:
                 listener.open_follow_up_window()
 
@@ -93,7 +148,7 @@ def main() -> None:
                 speaker,
                 on_command=submit,
                 on_stop=stop,
-                on_wake=lambda: (window.post("status", "listening"),
+                on_wake=lambda: (set_status("listening"),
                                  speaker.say(random.choice(WAKE_REPLIES))),
             )
             listener.start()

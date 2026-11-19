@@ -6,5 +6,9 @@
   "voice_enabled": true,
   "computer_control": true,
   "confirm_shell_commands": true,
-  "tts_voice_contains": ""
+  "tts_voice_contains": "",
+  "pet_enabled": true,
+  "skin": "default",
+  "pet_height": 160,
+  "start_with_chat_open": true
 }

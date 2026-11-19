@@ -17,21 +17,28 @@ import time
 _pyautogui = None
 
 
+def enable_dpi_awareness() -> None:
+    """Use real pixels on scaled displays, so screenshots, clicks and windows agree.
+
+    Call before any window is created.
+    """
+    if sys.platform == "win32":
+        import ctypes
+
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
+
+
 def _gui():
     """Import pyautogui lazily (it needs a display at import time)."""
     global _pyautogui
     if _pyautogui is None:
-        if sys.platform == "win32":
-            # Without DPI awareness, screenshots and clicks disagree on scaled displays.
-            import ctypes
-
-            try:
-                ctypes.windll.shcore.SetProcessDpiAwareness(2)
-            except Exception:
-                try:
-                    ctypes.windll.user32.SetProcessDPIAware()
-                except Exception:
-                    pass
+        enable_dpi_awareness()
         import pyautogui
 
         pyautogui.FAILSAFE = True

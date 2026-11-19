@@ -22,6 +22,8 @@ class ToolContext:
     notify: Callable[[str], None]           # show a line in the chat window
     confirm: Callable[[str], bool]          # ask the user yes/no, blocking
     confirm_shell_commands: bool = True
+    # Makes the on-screen character move; None when the desktop pet is off.
+    pet_command: Callable[[str], str] | None = None
 
 
 @dataclass
@@ -85,6 +87,30 @@ def run_tool(ctx: ToolContext, name: str, inp: dict) -> str:
 def _say(ctx: ToolContext, inp: dict) -> str:
     ctx.speak(inp["text"])
     return "Said."
+
+
+# --------------------------------------------------------------------------
+# Your body on screen
+# --------------------------------------------------------------------------
+@tool(
+    "move_yourself",
+    "Move your on-screen character, who walks along the bottom of the user's screen. "
+    "Use it for fun and expression: walk over to the user's cursor when they call you, "
+    "wave hello, dance when celebrating, sit when relaxing, or get out of the way.",
+    {
+        "action": {
+            "type": "string",
+            "enum": ["walk_left", "walk_right", "walk_center", "walk_to_cursor",
+                     "jump", "sit", "wave", "dance", "away", "come_back"],
+            "description": "away hides you until come_back.",
+        }
+    },
+    ["action"],
+)
+def _move_yourself(ctx: ToolContext, inp: dict) -> str:
+    if ctx.pet_command is None:
+        return "Your on-screen character is turned off."
+    return ctx.pet_command(inp["action"])
 
 
 # --------------------------------------------------------------------------
