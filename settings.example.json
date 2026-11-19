@@ -1,0 +1,10 @@
+{
+  "name": "Buddy",
+  "user_name": "",
+  "wake_words": ["hey buddy", "buddy"],
+  "effort": "medium",
+  "voice_enabled": true,
+  "computer_control": true,
+  "confirm_shell_commands": true,
+  "tts_voice_contains": ""
+}

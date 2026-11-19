@@ -1,0 +1,11 @@
+anthropic>=2.11.0
+# Computer control
+pyautogui>=0.9.54
+mss>=9.0
+Pillow>=10.0
+pyperclip>=1.9
+pygetwindow>=0.0.9
+# Voice (offline)
+vosk>=0.3.45
+sounddevice>=0.4.6
+pyttsx3>=2.90
